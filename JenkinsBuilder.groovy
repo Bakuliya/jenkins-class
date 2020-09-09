@@ -1,6 +1,6 @@
 // Uniq name for the pod or slave 
 def k8slabel = "jenkins-pipeline-${UUID.randomUUID().toString()}"
-
+def branch = "${scm.branches[0].name}".replaceAll(/^\*\//, '')
 
 // yaml def for slaves 
 def slavePodTemplate = """
@@ -48,18 +48,22 @@ def slavePodTemplate = """
 
         dir('deployments/docker') {
             container('docker') {
+                withCredentials([usernamePassword(credentialsId: 'docker-creds', passwordVariable: 'PASSWORD', usernameVariable: 'USERNAME')]) {
 
-                stage('Docker Build') {
-                    sh 'docker build -t artemis .'
+                    stage('Docker Build') {
+                        sh 'docker build -t artemis .'
+                    }
+
+                    stage('Docker Login') {
+                        sh "docker login --username  $USERNAME  --password $PASSWORD " 
+                    }
+
+                    stage('Docker Push') {
+                        println(branch)
+                        sh 'docker tag artemis fsadykov/artemis'
+                        sh 'docker push fsadykov/artemis'
+                    }
                 }
-
-
-
-
-            }
-            
-            stage('checking') {
-                sh 'ls -l'
             }
         }
       }
